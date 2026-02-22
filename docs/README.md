@@ -1,0 +1,7 @@
+# Documentation Index
+
+- `../AGENTS.md`: top-level agent entrypoint and workflow conventions.
+- `architecture.md`: runtime architecture, layering, and constraints.
+- `api-workflows.md`: endpoint sequencing and operational API contracts.
+- `environment-runbook.md`: setup, deploy, and troubleshooting commands.
+

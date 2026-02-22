@@ -1,13 +1,13 @@
-# EZ Market MVP
+# EZ Market MVP (Cloudflare Workers)
 
-API-first modular monolith for automated multi-market grocery ordering.
+API-first modular monolith for automated multi-market grocery ordering, now running on Cloudflare Workers + D1.
 
 ## Stack
 
-- Node.js 22 + TypeScript
-- Fastify API + BullMQ workers
-- PostgreSQL 16 + Prisma ORM
-- Redis queue backend
+- Cloudflare Workers + TypeScript + Hono
+- D1 (SQLite) for app data
+- Cloudflare Queues for checkout execution pipeline
+- Static `web/` assets served via Worker assets binding
 - Mock API + scraping connectors for MVP
 
 ## Implemented Modules
@@ -19,59 +19,68 @@ API-first modular monolith for automated multi-market grocery ordering.
 - `cart`: add/update items, get active cart
 - `pricing`: quote generation across active connectors
 - `optimizer`: split-cart optimization by total cost (items + fees + tax estimate)
-- `checkout`: prepare + explicit approval + idempotency + reprice guardrail
-- `orders`: list/get/cancel, leg-level status
+- `checkout`: prepare works, `approve` is feature-gated with `503` in phase 1
+- `orders`: list/get/cancel
 - `admin`: connector policies + kill-switch controls
-- `notifications`: audit-backed notification stub
-- worker roles: checkout execution + ingestion/optimization/connector/reconciliation placeholders
 
-## Quick Start
+## Cloudflare Setup
 
-1. Install deps
+1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Start infra
+2. Create D1 databases
 
 ```bash
-docker compose up -d
+wrangler d1 create ez-market-dev
+wrangler d1 create ez-market-prod
 ```
 
-3. Configure env
+3. Create queues
 
 ```bash
-cp .env.example .env
+wrangler queues create ez-market-checkout-dev
+wrangler queues create ez-market-checkout-prod
 ```
 
-4. Generate Prisma client and push schema
+4. Update `wrangler.toml` with generated D1 IDs.
+
+5. Set secrets per environment
 
 ```bash
-npm run prisma:generate
-npm run prisma:push
+wrangler secret put JWT_SECRET --env dev
+wrangler secret put ENCRYPTION_KEY --env dev
+wrangler secret put JWT_SECRET
+wrangler secret put ENCRYPTION_KEY
 ```
 
-5. Seed catalog and connector policies
+6. Apply schema + seed
 
 ```bash
-npm run seed
+npm run db:apply:dev
+npm run db:seed:dev
+npm run db:apply:prod
+npm run db:seed:prod
 ```
 
-6. Run API + workers
+## Local Preview
 
 ```bash
-npm run dev
-npm run worker
+npm run db:apply:local
+npm run db:seed:local
+npm run cf:dev
 ```
 
-7. Open web MVP console
+## Deploy
 
-- [http://localhost:3000/app](http://localhost:3000/app)
+```bash
+npm run cf:deploy:dev
+npm run cf:deploy:prod
+```
 
-## Required API Surface
-
-Implemented endpoints:
+## API Surface
 
 - `POST /v1/auth/register`
 - `POST /v1/auth/login`
@@ -88,21 +97,20 @@ Implemented endpoints:
 - `POST /v1/pricing/quote`
 - `POST /v1/optimizer/plan`
 - `POST /v1/checkout/prepare`
-- `POST /v1/checkout/approve`
+- `POST /v1/checkout/approve` (phase 1: returns `503`)
 - `GET /v1/orders/:id`
 - `GET /v1/orders/`
 - `POST /v1/orders/:id/cancel`
 - `GET /v1/admin/connectors`
 - `POST /v1/admin/connectors/:market/kill-switch`
 
-## Notes
+## Documentation for Agents
 
-- MVP is constrained to one city (`CITY_NAME` + geofence env settings).
-- Delivery-only logic.
-- Explicit final approval is mandatory before order execution.
-- Payment storage is token reference only (`payment_method_refs`).
-- Connector compliance controls include per-market kill-switch.
-- Admin endpoints require `User.role = ADMIN`.
+- `AGENTS.md`: quick start for coding agents (repo map, constraints, conventions).
+- `docs/README.md`: docs index.
+- `docs/architecture.md`: runtime architecture and data/control flow.
+- `docs/api-workflows.md`: API request sequencing and integration contracts.
+- `docs/environment-runbook.md`: local/dev/prod setup and troubleshooting commands.
 
 ## Test
 
