@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EZ Market MVP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f4f8f5;
+        --paper: #ffffff;
+        --ink: #0f3d2e;
+        --accent: #e05b2d;
+        --muted: #5a6b64;
+        --line: #c6ddd4;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", sans-serif;
+        background: radial-gradient(circle at 20% 0%, #dcefe7, #f4f8f5 45%, #edf5f2);
+        color: var(--ink);
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.6rem, 3vw, 2.4rem);
+      }
+      .lead { color: var(--muted); margin-bottom: 20px; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 8px 22px rgba(15, 61, 46, 0.08);
+      }
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 1rem;
+      }
+      label { display: block; margin-bottom: 8px; font-size: 0.84rem; color: var(--muted); }
+      input, button, textarea {
+        width: 100%;
+        font: inherit;
+        border-radius: 10px;
+      }
+      input, textarea {
+        border: 1px solid var(--line);
+        padding: 8px 10px;
+        margin-top: 4px;
+      }
+      button {
+        border: 0;
+        cursor: pointer;
+        background: var(--accent);
+        color: #fff;
+        padding: 10px;
+        font-weight: 600;
+      }
+      .ghost { background: var(--ink); }
+      pre {
+        margin: 10px 0 0;
+        max-height: 240px;
+        overflow: auto;
+        background: #f8fbf9;
+        border: 1px dashed var(--line);
+        padding: 10px;
+        border-radius: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+      }
+      .status {
+        margin: 10px 0 18px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: #ddf4ea;
+        border: 1px solid #a7d4bf;
+      }
+      .pulse {
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.015); }
+        100% { transform: scale(1); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>EZ Market MVP Console</h1>
+      <p class="lead">Single-city automated grocery ordering with quote, split-plan, approval, and execution.</p>
+      <div class="status" id="status">Not authenticated</div>
+      <div class="grid">
+        <section class="card pulse">
+          <h2>1) Register / Login</h2>
+          <label>Email <input id="email" value="demo@ezmarket.local" /></label>
+          <label>Password <input id="password" value="password123" type="password" /></label>
+          <label>Name <input id="name" value="Demo User" /></label>
+          <button onclick="register()">Register</button>
+          <button class="ghost" onclick="login()" style="margin-top:8px;">Login</button>
+          <pre id="authOut"></pre>
+        </section>
+
+        <section class="card">
+          <h2>2) Add Address + Market Link</h2>
+          <button onclick="addAddress()">Add Default SF Address</button>
+          <button class="ghost" onclick="linkMarket('market_api')" style="margin-top:8px;">Link market_api</button>
+          <button class="ghost" onclick="linkMarket('market_scrape')" style="margin-top:8px;">Link market_scrape</button>
+          <pre id="profileOut"></pre>
+        </section>
+
+        <section class="card">
+          <h2>3) Search + Add Cart Items</h2>
+          <label>Search query <input id="q" value="" /></label>
+          <button onclick="searchCatalog()">Search Catalog</button>
+          <label style="margin-top:10px;">Catalog Item ID <input id="catalogItemId" /></label>
+          <label>Quantity <input id="quantity" type="number" value="1" /></label>
+          <button class="ghost" onclick="addCartItem()">Add/Update Cart Item</button>
+          <button class="ghost" onclick="getCart()" style="margin-top:8px;">Get Cart</button>
+          <pre id="cartOut"></pre>
+        </section>
+
+        <section class="card">
+          <h2>4) Quote + Optimize</h2>
+          <button onclick="getQuote()">Generate Quote</button>
+          <button class="ghost" onclick="optimize()" style="margin-top:8px;">Create Optimization Plan</button>
+          <pre id="quoteOut"></pre>
+        </section>
+
+        <section class="card">
+          <h2>5) Prepare + Approve Checkout</h2>
+          <label>Optimization Plan ID <input id="planId" /></label>
+          <button onclick="prepareCheckout()">Prepare Checkout</button>
+          <label style="margin-top:10px;">Approval Bundle ID <input id="bundleId" /></label>
+          <button class="ghost" onclick="approveCheckout()">Approve Checkout</button>
+          <pre id="checkoutOut"></pre>
+        </section>
+
+        <section class="card">
+          <h2>6) Orders</h2>
+          <label>Order ID <input id="orderId" /></label>
+          <button onclick="getOrder()">Get Order</button>
+          <button class="ghost" onclick="listOrders()" style="margin-top:8px;">List Orders</button>
+          <pre id="ordersOut"></pre>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const state = { token: null, lastPlanId: null, lastBundleId: null, lastOrderId: null };
+      const base = "";
+
+      function setStatus(text) {
+        document.getElementById("status").textContent = text;
+      }
+
+      function authHeaders(extra = {}) {
+        return {
+          "Content-Type": "application/json",
+          ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}),
+          ...extra
+        };
+      }
+
+      async function call(method, path, body, headers = {}) {
+        const response = await fetch(base + path, {
+          method,
+          headers: authHeaders(headers),
+          body: body ? JSON.stringify(body) : undefined
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(`${response.status}: ${data.message || response.statusText}`);
+        }
+        return data;
+      }
+
+      function show(id, data) {
+        document.getElementById(id).textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function register() {
+        try {
+          const data = await call("POST", "/v1/auth/register", {
+            email: email.value,
+            password: password.value,
+            name: name.value
+          });
+          state.token = data.token;
+          setStatus(`Authenticated as ${data.user.email}`);
+          show("authOut", data);
+        } catch (error) {
+          show("authOut", { error: error.message });
+        }
+      }
+
+      async function login() {
+        try {
+          const data = await call("POST", "/v1/auth/login", {
+            email: email.value,
+            password: password.value
+          });
+          state.token = data.token;
+          setStatus(`Authenticated as ${data.user.email}`);
+          show("authOut", data);
+        } catch (error) {
+          show("authOut", { error: error.message });
+        }
+      }
+
+      async function addAddress() {
+        try {
+          const data = await call("POST", "/v1/users/me/address", {
+            line1: "123 Market St",
+            city: "San Francisco",
+            state: "CA",
+            zip: "94105",
+            country: "US",
+            latitude: 37.789,
+            longitude: -122.394,
+            isDefault: true
+          });
+          show("profileOut", data);
+        } catch (error) {
+          show("profileOut", { error: error.message });
+        }
+      }
+
+      async function linkMarket(market) {
+        try {
+          const data = await call("POST", "/v1/markets/accounts/link", {
+            market,
+            credential: "demo:credential"
+          });
+          show("profileOut", data);
+        } catch (error) {
+          show("profileOut", { error: error.message });
+        }
+      }
+
+      async function searchCatalog() {
+        try {
+          const data = await call("GET", `/v1/catalog/search?q=${encodeURIComponent(q.value)}&city=San%20Francisco`);
+          if (data.items?.[0]) {
+            document.getElementById("catalogItemId").value = data.items[0].id;
+          }
+          show("cartOut", data);
+        } catch (error) {
+          show("cartOut", { error: error.message });
+        }
+      }
+
+      async function addCartItem() {
+        try {
+          const data = await call("POST", "/v1/cart/items", {
+            catalogItemId: catalogItemId.value,
+            quantity: Number(quantity.value)
+          });
+          show("cartOut", data);
+        } catch (error) {
+          show("cartOut", { error: error.message });
+        }
+      }
+
+      async function getCart() {
+        try {
+          const data = await call("GET", "/v1/cart/");
+          show("cartOut", data);
+        } catch (error) {
+          show("cartOut", { error: error.message });
+        }
+      }
+
+      async function getQuote() {
+        try {
+          const data = await call("POST", "/v1/pricing/quote", {});
+          show("quoteOut", data);
+        } catch (error) {
+          show("quoteOut", { error: error.message });
+        }
+      }
+
+      async function optimize() {
+        try {
+          const data = await call("POST", "/v1/optimizer/plan", {});
+          state.lastPlanId = data.id;
+          document.getElementById("planId").value = data.id;
+          show("quoteOut", data);
+        } catch (error) {
+          show("quoteOut", { error: error.message });
+        }
+      }
+
+      async function prepareCheckout() {
+        try {
+          const plan = planId.value || state.lastPlanId;
+          const data = await call(
+            "POST",
+            "/v1/checkout/prepare",
+            { optimizationPlanId: plan },
+            { "x-idempotency-key": `prep-${Date.now()}` }
+          );
+          state.lastBundleId = data.id;
+          document.getElementById("bundleId").value = data.id;
+          show("checkoutOut", data);
+        } catch (error) {
+          show("checkoutOut", { error: error.message });
+        }
+      }
+
+      async function approveCheckout() {
+        try {
+          const bundle = bundleId.value || state.lastBundleId;
+          const data = await call(
+            "POST",
+            "/v1/checkout/approve",
+            { approvalBundleId: bundle, confirm: true },
+            { "x-idempotency-key": `approve-${Date.now()}` }
+          );
+          state.lastOrderId = data.orderId;
+          document.getElementById("orderId").value = data.orderId;
+          show("checkoutOut", data);
+        } catch (error) {
+          show("checkoutOut", { error: error.message });
+        }
+      }
+
+      async function getOrder() {
+        try {
+          const id = orderId.value || state.lastOrderId;
+          const data = await call("GET", `/v1/orders/${id}`);
+          show("ordersOut", data);
+        } catch (error) {
+          show("ordersOut", { error: error.message });
+        }
+      }
+
+      async function listOrders() {
+        try {
+          const data = await call("GET", "/v1/orders/");
+          show("ordersOut", data);
+        } catch (error) {
+          show("ordersOut", { error: error.message });
+        }
+      }
+    </script>
+  </body>
+</html>

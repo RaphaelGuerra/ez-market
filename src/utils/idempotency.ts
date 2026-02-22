@@ -1,5 +1,6 @@
 import { prisma } from "../db/prisma.js";
 import { stableHash } from "./hash.js";
+import { Prisma } from "@prisma/client";
 
 type CachedResponse = {
   statusCode: number;
@@ -53,7 +54,7 @@ export async function storeIdempotentResponse(input: {
       }
     },
     update: {
-      response: input.response,
+      response: input.response as Prisma.InputJsonValue,
       statusCode: input.statusCode,
       requestHash: stableHash(input.request)
     },
@@ -62,7 +63,7 @@ export async function storeIdempotentResponse(input: {
       endpoint: input.endpoint,
       userId: input.userId,
       requestHash: stableHash(input.request),
-      response: input.response,
+      response: input.response as Prisma.InputJsonValue,
       statusCode: input.statusCode
     }
   });
