@@ -1,0 +1,380 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MarketAccountStatus {
+  ACTIVE
+  REAUTH_REQUIRED
+  DISABLED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  EXPIRED
+  REJECTED
+}
+
+enum OrderStatus {
+  PENDING_APPROVAL
+  APPROVED
+  PROCESSING
+  PARTIAL_FAILED
+  COMPLETED
+  CANCELED
+  FAILED
+}
+
+enum OrderLegStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+model User {
+  id                        String               @id @default(cuid())
+  email                     String               @unique
+  passwordHash              String
+  phone                     String?
+  name                      String
+  emailVerified             Boolean              @default(false)
+  city                      String?
+  maxPriceDeltaPct          Decimal              @default(5)
+  approvalSpendCapCents     Int?                 @default(50000)
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+  addresses                 UserAddress[]
+  marketAccounts            MarketAccount[]
+  paymentMethodRefs         PaymentMethodRef[]
+  carts                     Cart[]
+  substitutionRules         SubstitutionRule[]
+  optimizationPlans         OptimizationPlan[]
+  approvalBundles           ApprovalBundle[]
+  orders                    Order[]
+  auditRecords              AuditLog[]
+  orderEvents               OrderEvent[]
+}
+
+model UserAddress {
+  id            String   @id @default(cuid())
+  userId        String
+  line1         String
+  line2         String?
+  city          String
+  state         String
+  zip           String
+  country       String
+  latitude      Decimal
+  longitude     Decimal
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model MarketAccount {
+  id                   String              @id @default(cuid())
+  userId               String
+  market               String
+  externalAccountId    String?
+  encryptedCredential  String
+  encryptedSession     String?
+  status               MarketAccountStatus @default(ACTIVE)
+  lastRefreshedAt      DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders               OrderLeg[]
+
+  @@index([userId])
+  @@unique([userId, market])
+}
+
+model PaymentMethodRef {
+  id                  String   @id @default(cuid())
+  userId              String
+  provider            String
+  tokenRef            String
+  last4               String?
+  brand               String?
+  expiresAt           DateTime?
+  isDefault           Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CatalogItem {
+  id                  String   @id @default(cuid())
+  name                String
+  brand               String?
+  category            String
+  unit                String
+  normalizedName      String
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  marketSkus          MarketSku[]
+  cartItems           CartItem[]
+
+  @@index([normalizedName])
+}
+
+model MarketSku {
+  id                  String   @id @default(cuid())
+  market              String
+  externalSkuId       String
+  catalogItemId       String?
+  name                String
+  brand               String?
+  unit                String
+  packageSize         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  catalogItem         CatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  productMappings     ProductMapping[]
+  offerSnapshots      OfferSnapshot[]
+
+  @@unique([market, externalSkuId])
+  @@index([market, name])
+}
+
+model ProductMapping {
+  id                  String   @id @default(cuid())
+  marketSkuId         String
+  catalogItemId       String
+  confidence          Decimal
+  createdAt           DateTime @default(now())
+  marketSku           MarketSku   @relation(fields: [marketSkuId], references: [id], onDelete: Cascade)
+  catalogItem         CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  @@index([catalogItemId])
+}
+
+model OfferSnapshot {
+  id                  String   @id @default(cuid())
+  marketSkuId         String
+  market              String
+  zip                 String
+  priceCents          Int
+  deliveryFeeCents    Int
+  serviceFeeCents     Int
+  taxEstimateCents    Int
+  inStock             Boolean
+  confidence          Decimal
+  fetchedAt           DateTime @default(now())
+  expiresAt           DateTime
+  marketSku           MarketSku @relation(fields: [marketSkuId], references: [id], onDelete: Cascade)
+
+  @@index([market, zip, fetchedAt])
+}
+
+model Cart {
+  id                  String   @id @default(cuid())
+  userId              String
+  status              String   @default("ACTIVE")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items               CartItem[]
+  optimizationPlans   OptimizationPlan[]
+
+  @@index([userId, status])
+}
+
+model CartItem {
+  id                  String   @id @default(cuid())
+  cartId              String
+  catalogItemId       String
+  quantity            Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  cart                Cart       @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  catalogItem         CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, catalogItemId])
+}
+
+model SubstitutionRule {
+  id                  String   @id @default(cuid())
+  userId              String
+  catalogItemId       String?
+  allowSubstitution   Boolean  @default(true)
+  maxPriceIncreasePct Decimal  @default(10)
+  preferredBrands     String[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, catalogItemId])
+}
+
+model OptimizationPlan {
+  id                  String   @id @default(cuid())
+  userId              String
+  cartId              String
+  quoteHash           String
+  subtotalCents       Int
+  feeCents            Int
+  taxCents            Int
+  totalCents          Int
+  projectedSavingsCents Int
+  createdAt           DateTime @default(now())
+  expiresAt           DateTime
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cart                Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  planLegs            PlanLeg[]
+  approvalBundles     ApprovalBundle[]
+
+  @@index([userId, cartId, createdAt])
+}
+
+model PlanLeg {
+  id                  String   @id @default(cuid())
+  optimizationPlanId  String
+  market              String
+  marketAccountId     String?
+  itemSubtotalCents   Int
+  feeCents            Int
+  taxCents            Int
+  totalCents          Int
+  lineItems           Json
+  deliveryWindow      String?
+  reliabilityScore    Decimal
+  createdAt           DateTime @default(now())
+  optimizationPlan    OptimizationPlan @relation(fields: [optimizationPlanId], references: [id], onDelete: Cascade)
+
+  @@index([optimizationPlanId, market])
+}
+
+model ApprovalBundle {
+  id                  String        @id @default(cuid())
+  userId              String
+  optimizationPlanId  String
+  quoteHash           String
+  status              ApprovalStatus @default(PENDING)
+  approvedAt          DateTime?
+  expiresAt           DateTime
+  metadata            Json
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  optimizationPlan    OptimizationPlan @relation(fields: [optimizationPlanId], references: [id], onDelete: Cascade)
+  orders              Order[]
+
+  @@index([userId, status, expiresAt])
+}
+
+model Order {
+  id                  String      @id @default(cuid())
+  userId              String
+  approvalBundleId    String
+  status              OrderStatus @default(PENDING_APPROVAL)
+  totalCents          Int
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvalBundle      ApprovalBundle @relation(fields: [approvalBundleId], references: [id], onDelete: Cascade)
+  orderLegs           OrderLeg[]
+  orderEvents         OrderEvent[]
+
+  @@index([userId, status, createdAt])
+}
+
+model OrderLeg {
+  id                  String       @id @default(cuid())
+  orderId             String
+  market              String
+  marketAccountId     String
+  status              OrderLegStatus @default(PENDING)
+  totalCents          Int
+  externalOrderId     String?
+  errorCode           String?
+  errorMessage        String?
+  payload             Json
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  order               Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  marketAccount       MarketAccount @relation(fields: [marketAccountId], references: [id])
+
+  @@index([orderId, status])
+}
+
+model OrderEvent {
+  id                  String   @id @default(cuid())
+  orderId             String
+  userId              String
+  type                String
+  payload             Json
+  createdAt           DateTime @default(now())
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model ConnectorPolicy {
+  id                  String   @id @default(cuid())
+  market              String   @unique
+  enabled             Boolean  @default(true)
+  mode                String   @default("HYBRID")
+  robotsCompliant     Boolean  @default(true)
+  tosCompliant        Boolean  @default(true)
+  throttleRpm         Int      @default(30)
+  killSwitchEnabled   Boolean  @default(false)
+  notes               String?
+  updatedAt           DateTime @updatedAt
+  health              ConnectorHealth[]
+
+  @@index([enabled, killSwitchEnabled])
+}
+
+model ConnectorHealth {
+  id                  String   @id @default(cuid())
+  connectorPolicyId   String
+  successRate         Decimal
+  latencyMsP95        Int
+  errorRate           Decimal
+  checkedAt           DateTime @default(now())
+  connectorPolicy     ConnectorPolicy @relation(fields: [connectorPolicyId], references: [id], onDelete: Cascade)
+
+  @@index([connectorPolicyId, checkedAt])
+}
+
+model AuditLog {
+  id                  String   @id @default(cuid())
+  userId              String?
+  action              String
+  entity              String
+  entityId            String?
+  metadata            Json
+  createdAt           DateTime @default(now())
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([action, entity, createdAt])
+}
+
+model IdempotencyKey {
+  id                  String   @id @default(cuid())
+  key                 String
+  endpoint            String
+  userId              String?
+  requestHash         String
+  response            Json
+  statusCode          Int
+  createdAt           DateTime @default(now())
+
+  @@unique([key, endpoint])
+  @@index([userId, createdAt])
+}
