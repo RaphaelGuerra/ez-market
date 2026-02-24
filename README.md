@@ -1,5 +1,20 @@
 # EZ Market MVP (Cloudflare Workers)
 
+Last updated: 2026-02-24
+
+## Table of Contents
+
+<!-- TOC start -->
+- [Stack](#stack)
+- [Implemented Modules](#implemented-modules)
+- [Cloudflare Setup](#cloudflare-setup)
+- [Local Preview](#local-preview)
+- [Deploy](#deploy)
+- [API Surface](#api-surface)
+- [Documentation for Agents](#documentation-for-agents)
+- [Test](#test)
+<!-- TOC end -->
+
 API-first modular monolith for automated multi-market grocery ordering, now running on Cloudflare Workers + D1.
 
 ## Stack
