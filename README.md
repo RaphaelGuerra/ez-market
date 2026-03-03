@@ -1,6 +1,6 @@
 # EZ Market MVP (Cloudflare Workers)
 
-Last updated: 2026-02-24
+Last updated: 2026-03-03
 
 ## Table of Contents
 
