@@ -15,6 +15,9 @@ Last updated: 2026-03-05
 - [Test](#test)
 <!-- TOC end -->
 
+[![Lint](https://github.com/RaphaelGuerra/ez-market/actions/workflows/lint.yml/badge.svg)](https://github.com/RaphaelGuerra/ez-market/actions/workflows/lint.yml)
+[![Security](https://github.com/RaphaelGuerra/ez-market/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/ez-market/actions/workflows/security.yml)
+
 API-first modular monolith for automated multi-market grocery ordering, now running on Cloudflare Workers + D1.
 
 ## Stack
