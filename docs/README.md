@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 - `../AGENTS.md`: top-level agent entrypoint and workflow conventions.
 - `architecture.md`: runtime architecture, layering, and constraints.
