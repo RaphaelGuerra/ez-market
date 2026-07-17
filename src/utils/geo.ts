@@ -14,6 +14,9 @@ export function haversineDistanceKm(a: { lat: number; lon: number }, b: { lat: n
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
-  const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  // Floating-point rounding can move the Haversine value just outside its
+  // mathematical [0, 1] range, especially for nearly antipodal points.
+  const clampedX = Math.min(1, Math.max(0, x));
+  const c = 2 * Math.atan2(Math.sqrt(clampedX), Math.sqrt(1 - clampedX));
   return EARTH_RADIUS_KM * c;
 }
