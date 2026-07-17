@@ -9,4 +9,14 @@ describe("haversineDistanceKm", () => {
     );
     expect(distance).toBeCloseTo(0, 5);
   });
+
+  it("returns a finite distance for antipodal coordinates", () => {
+    const distance = haversineDistanceKm(
+      { lat: 0, lon: 0 },
+      { lat: 0, lon: 180 }
+    );
+
+    expect(Number.isFinite(distance)).toBe(true);
+    expect(distance).toBeCloseTo(Math.PI * 6371, 5);
+  });
 });
